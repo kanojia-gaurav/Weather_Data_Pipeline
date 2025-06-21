@@ -1,14 +1,10 @@
-import pandas as pd
-from datetime import datetime
+import json
+from datetime import datetime, timezone
 import requests
-import pandas as pd
-from pandas import json_normalize
 import os
-import s3fs
-import csv
 import utils.utils as utils
+import boto3
 
-# print(datetime.now())
 
 City = [
     "Delhi",
@@ -34,34 +30,59 @@ headers = {
     "Content-Type" : "application/json" 
 }
 
-# print(utils.appid)
-# print(current_dir)
+# python function to store the date on local computer
+def run_openweather_etl():
+    now = datetime.now(timezone.utc)
+    timestamp = int(now.timestamp())
 
-for data in City:
-    folder_path = os.path.join(output_path, data)
-    os.makedirs(folder_path, exist_ok=True)
+    for city in City:
+        print(city)
+        api = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={utils.appid}"
+        response = requests.get(api, headers=headers)
 
-    file_path = os.path.join(folder_path, f"{data}_weather_{datetime.now()}.csv")
-    print(file_path)
-    # with open(file_path, mode="w", newline="") as file:
-    #     writer = csv.writer(file)
-    #     print(writer)
-        # writer.writerow(headers)  # write header
+        if response.status_code == 200:
+            myData = response.json()
+            folder_path = os.path.join(output_path, city)
+            os.makedirs(folder_path, exist_ok=True)
 
+            file_name = f"{city}_weather_{now.year}_{now.month}_{now.day}_{timestamp}.json"
+            file_path = os.path.join(folder_path, file_name)
 
+            with open(file_path, 'w') as file:
+                json.dump(myData, file, indent=4)
 
-
-
-# def run_openweather_etl():
-
-#     for data in City:
-#         api = f"https://api.openweathermap.org/data/2.5/weather?q={data}&appid={utils.appid}"
-#         print(data)
-#         response = requests.request("GET",api, headers=headers, data={})
-#         myData = response.json()
-
-#         df = pd.json_normalize(myData)
-#         print(df)
+        else:
+            print(f"Failed to fetch data for {city}: {response.status_code}")
 
 
-# print(run_openweather_etl())
+# run_openweather_etl()
+
+
+s3 = boto3.client('s3')
+bucket_name = 'weather-project-gaurav'
+
+#python function to store data on the S3 bucket
+def run_openweather_etl_S3():
+    now = datetime.now(timezone.utc)
+    timestamp = int(now.timestamp())
+
+    for city in City:
+        print(city)
+        api = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={utils.appid}"
+        response = requests.get(api, headers=headers)
+
+        if response.status_code == 200:
+            myData = response.json()
+            s3_key = f"LandingZone/{city}/{city}_weather_{now.year}_{now.month}_{now.day}_{timestamp}.json"
+
+            s3.put_object(
+                Bucket=bucket_name,
+                Key=s3_key,
+                Body=json.dumps(myData, indent=4),
+                ContentType='application/json'
+            )
+            print(f"Uploaded: {s3_key}")
+        else:
+            print(f"Failed to fetch data for {city}: {response.status_code}")
+
+run_openweather_etl_S3()
