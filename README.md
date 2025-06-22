@@ -1,5 +1,5 @@
 # Weather_Data_Pipeline
 
-- ** This is the basic python code where we move the data from local to s3 bucket with the help of the boto3 fucntion **
-- ** We need to setup the aws cli where we have to give the aws user credential to test the data flow from local to the s3 bucket.
-- Here the AWS user is the IAM user where we give the rquired permission to the user to access the specific AWS service. 
+- This project contains basic Python code to move data from the local system to an S3 bucket using the **`boto3`** library.
+- AWS CLI must be configured with valid **AWS user credentials** to enable local-to-S3 data flow for testing.
+- The AWS user should be an **IAM user** with the necessary permissions granted to access specific AWS services.
